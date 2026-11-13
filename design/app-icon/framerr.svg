@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3A2A8C"/>
+      <stop offset="1" stop-color="#8A4BF0"/>
+    </linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF5E7E"/>
+      <stop offset="0.6" stop-color="#FF9A5A"/>
+      <stop offset="1" stop-color="#FFD27A"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.22"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="24" stdDeviation="28" flood-color="#14082E" flood-opacity="0.45"/>
+    </filter>
+    <clipPath id="window"><rect x="332" y="272" width="360" height="450" rx="16"/></clipPath>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#shine)"/>
+  <!-- the mat: border around a 4:5 photo -->
+  <rect x="272" y="212" width="480" height="570" rx="40" fill="#FBF7F0" filter="url(#shadow)"/>
+  <g clip-path="url(#window)">
+    <rect x="332" y="272" width="360" height="450" fill="url(#photo)"/>
+    <circle cx="512" cy="560" r="92" fill="#FFF3D6" opacity="0.9"/>
+    <path d="M332 640 C420 590 470 610 530 640 C600 675 640 630 692 610 V722 H332 Z" fill="#5B2A86"/>
+  </g>
+</svg>
