@@ -10,4 +10,10 @@ nonisolated struct FrameSettings: Codable, Equatable, Sendable {
     var fillGap = FillGapMode.off
 
     static let borderRange = 0.0 ... 25.0
+
+    /// `Color` bridge for `ColorPicker`, stored as an sRGB `Color.Resolved`.
+    var pickerColor: Color {
+        get { Color(color) }
+        set { color = newValue.resolve(in: EnvironmentValues()) }
+    }
 }

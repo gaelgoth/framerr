@@ -10,11 +10,10 @@ enum UITestingSupport {
         static let isEnabled = false
     #endif
 
-    static let defaults: UserDefaults = {
-        guard isEnabled, let defaults = UserDefaults(suiteName: "framerr.ui-testing") else { return .standard }
-        defaults.removePersistentDomain(forName: "framerr.ui-testing")
-        return defaults
-    }()
+    /// Fresh, empty projects folder under UI testing, so every launch starts with no saved drafts.
+    static let projectsFolder: URL = isEnabled
+        ? freshFolder(named: "framerr-ui-projects")
+        : .applicationSupportDirectory.appending(path: "Projects")
 
     /// Fresh, empty export folder, or `nil` to ask the user.
     static let exportFolder: URL? = {
@@ -22,8 +21,12 @@ enum UITestingSupport {
         return freshFolder(named: "framerr-ui-export")
     }()
 
+    private static var hasSeeded = false
+
+    /// Seeds only the first project opened, so new projects start empty.
     static func seedIfEnabled(_ library: PhotoLibrary) async {
-        guard isEnabled else { return }
+        guard isEnabled, !hasSeeded else { return }
+        hasSeeded = true
         let folder = freshFolder(named: "framerr-ui-samples")
         // swiftlint:disable:next large_tuple
         let samples: [(String, Int, Int, CGColor)] = [

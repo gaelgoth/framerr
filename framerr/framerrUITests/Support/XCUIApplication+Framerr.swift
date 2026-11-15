@@ -18,6 +18,14 @@ extension XCUIApplication {
         photoCells.element(boundBy: index)
     }
 
+    var projectRows: XCUIElementQuery {
+        descendants(matching: .any).matching(identifier: "project-row")
+    }
+
+    var unsavedRow: XCUIElement {
+        descendants(matching: .any).matching(identifier: "unsaved-row").firstMatch
+    }
+
     /// Matches by label; SwiftUI uses the SF Symbol name as identifier for icon buttons.
     func button(labeled label: String) -> XCUIElement {
         buttons.matching(NSPredicate(format: "label == %@", label)).firstMatch
