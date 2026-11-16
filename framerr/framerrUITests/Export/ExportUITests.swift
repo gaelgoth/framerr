@@ -6,8 +6,9 @@ final class ExportUITests: XCTestCase {
     }
 
     @MainActor
-    func testExportWritesNumberedFilesInGridOrder() {
+    func testExportWritesNumberedFilesInGridOrder() throws {
         let app = XCUIApplication.launchWithSamplePhotos()
+        try app.skipUnlessWindowFitsScreen()
 
         app.photoCell(0).rightClick()
         app.menuItems["Move to End"].click()
@@ -22,8 +23,9 @@ final class ExportUITests: XCTestCase {
     }
 
     @MainActor
-    func testExportingAgainAsksBeforeReplacing() {
+    func testExportingAgainAsksBeforeReplacing() throws {
         let app = XCUIApplication.launchWithSamplePhotos()
+        try app.skipUnlessWindowFitsScreen()
         let export = app.buttons["Export"].firstMatch
 
         export.click()

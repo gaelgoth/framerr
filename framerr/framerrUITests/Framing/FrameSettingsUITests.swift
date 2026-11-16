@@ -6,8 +6,9 @@ final class FrameSettingsUITests: XCTestCase {
     }
 
     @MainActor
-    func testRatioChangeReframesEveryPhoto() {
+    func testRatioChangeReframesEveryPhoto() throws {
         let app = XCUIApplication.launchWithSamplePhotos()
+        try app.skipUnlessWindowFitsScreen()
         XCTAssertEqual(app.photoCell(0).aspectRatio, 4.0 / 5.0, accuracy: 0.03, "defaults to portrait 4:5")
 
         app.popUpButtons["ratio-picker"].click()
@@ -24,8 +25,9 @@ final class FrameSettingsUITests: XCTestCase {
     }
 
     @MainActor
-    func testBorderWidthAndFillTheGap() {
+    func testBorderWidthAndFillTheGap() throws {
         let app = XCUIApplication.launchWithSamplePhotos()
+        try app.skipUnlessWindowFitsScreen()
         let slider = app.sliders["border-slider"]
 
         XCTAssertTrue(app.text(containing: "5%").exists, "defaults to a 5% border")

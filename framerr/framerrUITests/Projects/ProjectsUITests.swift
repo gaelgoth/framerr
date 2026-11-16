@@ -6,8 +6,9 @@ final class ProjectsUITests: XCTestCase {
     }
 
     @MainActor
-    func testSaveAsProjectMovesTheUnsavedPostIntoAProject() {
+    func testSaveAsProjectMovesTheUnsavedPostIntoAProject() throws {
         let app = XCUIApplication.launchWithSamplePhotos()
+        try app.skipUnlessWindowFitsScreen()
         XCTAssertEqual(app.projectRows.count, 0, "projects are optional")
         XCTAssertTrue(app.text(containing: "Save a post as a project").exists, "the sidebar explains projects")
 
@@ -31,8 +32,9 @@ final class ProjectsUITests: XCTestCase {
     }
 
     @MainActor
-    func testNewProjectStartsEmptyWithItsOwnSettings() {
+    func testNewProjectStartsEmptyWithItsOwnSettings() throws {
         let app = XCUIApplication.launchWithSamplePhotos()
+        try app.skipUnlessWindowFitsScreen()
 
         app.button(labeled: "New Project").click()
         let title = app.textFields["project-title-field"]

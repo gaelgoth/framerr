@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 extension XCUIApplication {
@@ -8,6 +9,15 @@ extension XCUIApplication {
         app.launch()
         XCTAssertTrue(app.photoCells.element(boundBy: 2).waitForExistence(timeout: 10), "sample photos imported")
         return app
+    }
+
+    /// Skips tests that click the window's right side (Export, frame settings) when the window is wider
+    /// than the screen, as on the 1024 × 768 CI display: off-screen elements can't be clicked.
+    func skipUnlessWindowFitsScreen() throws {
+        let window = windows.firstMatch.frame
+        // Horizontal ranges only: they read the same in screen and UI-test coordinates.
+        let fits = NSScreen.screens.contains { $0.frame.minX <= window.minX && window.maxX <= $0.frame.maxX }
+        try XCTSkipUnless(fits, "the window is wider than the screen, so its right side can't be clicked")
     }
 
     var photoCells: XCUIElementQuery {
