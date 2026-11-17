@@ -73,7 +73,13 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 2. On every push to `main`, CI opens or updates a `chore(main): release x.y.z` pull request with the new version and `CHANGELOG.md`.
 3. Merge that pull request. CI tags `vx.y.z`, publishes the GitHub Release with the changelog as notes, and attaches the DMG.
 
-The version lives in `.release-please-manifest.json`; CI passes it to the build as `MARKETING_VERSION`.
+The version lives in `.release-please-manifest.json`; CI passes it to the build as `MARKETING_VERSION`. Only release-please edits that file — don't change it by hand.
+
+To force a specific version, push a commit to `main` with a `Release-As` footer. It applies to the next release only:
+
+```bash
+git commit --allow-empty -m "chore: release 1.0.0" -m "Release-As: 1.0.0"
+```
 
 ## License
 
