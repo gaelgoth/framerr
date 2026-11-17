@@ -1,8 +1,16 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State private var store = ProjectStore(root: UITestingSupport.projectsFolder)
+    @State private var selection = SidebarItem.unsaved
     @State private var library = PhotoLibrary()
-    @State private var settingsStore = FrameSettingsStore(defaults: UITestingSupport.defaults)
+    @State private var openProjectID: Project.ID?
+    /// The post outside any project: nothing is copied or written to disk.
+    @State private var unsaved = PhotoLibrary()
+    @State private var unsavedSettings = FrameSettings()
+    @State private var isSavingProject = false
+    /// Photos of the unsaved post being moved into the project just created from it.
+    @State private var photosToSave: [URL] = []
     @State private var exporter = ExportController()
 
     @State private var mode = WorkspaceMode.arrange
@@ -14,6 +22,18 @@ struct ContentView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        NavigationSplitView {
+            ProjectSidebar(store: store, selection: $selection)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 220)
+        } detail: {
+            detail
+        }
+        .task(id: selection) {
+            await openSelectedProject()
+        }
+    }
+
+    private var detail: some View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .frame(minWidth: 520, minHeight: 420)
@@ -22,7 +42,8 @@ struct ContentView: View {
                     ProgressView("Importing…")
                         .padding()
                         .background(.regularMaterial, in: .rect(cornerRadius: 12))
-                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                        // Opacity only: scaling the AppKit spinner gives it a fractional size and logs layout warnings.
+                        .transition(.opacity)
                 }
             }
             .animation(reduceMotion ? nil : .smooth, value: mode)
@@ -32,8 +53,9 @@ struct ContentView: View {
                 importPhotos(urls)
             }
             .toolbar { toolbar }
+            .navigationTitle(store[selection.projectID]?.title ?? String(localized: "Unsaved Post"))
             .inspector(isPresented: $isInspectorPresented) {
-                FrameSettingsView(store: settingsStore)
+                inspector
                     .inspectorColumnWidth(min: 260, ideal: 300, max: 400)
             }
             .fileImporter(
@@ -42,6 +64,9 @@ struct ContentView: View {
                 allowsMultipleSelection: filePicker == .photos,
                 onCompletion: handlePickedFiles
             )
+            .sheet(isPresented: $isSavingProject) {
+                ProjectEditor(project: Project(settings: unsavedSettings), isNew: true, save: saveUnsaved)
+            }
             .alert("Some Files Couldn’t Be Imported", isPresented: $isShowingImportFailures) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -52,7 +77,7 @@ struct ContentView: View {
                 isPresented: $exporter.isConfirmingReplace
             ) {
                 Button("Replace", role: .destructive) {
-                    Task { await exporter.confirmReplace(of: library.photos, settings: settingsStore.settings) }
+                    Task { await exporter.confirmReplace(of: library.photos, settings: settings) }
                 }
                 Button("Cancel", role: .cancel, action: exporter.cancelReplace)
             } message: {
@@ -71,9 +96,20 @@ struct ContentView: View {
             } message: {
                 Text(exporter.errorMessage)
             }
-            .task {
-                await UITestingSupport.seedIfEnabled(library)
-            }
+    }
+
+    /// The open project's settings, looked up by id on every access so a deleted project can't be written back.
+    private var settingsBinding: Binding<FrameSettings> {
+        guard let project = store[selection.projectID] else { return $unsavedSettings }
+        return Binding { store[project.id]?.settings ?? project.settings } set: { store[project.id]?.settings = $0 }
+    }
+
+    private var settings: FrameSettings {
+        settingsBinding.wrappedValue
+    }
+
+    private var inspector: some View {
+        FrameSettingsView(settings: settingsBinding)
     }
 
     @ViewBuilder
@@ -83,15 +119,18 @@ struct ContentView: View {
                 Label("No Photos", systemImage: "photo.on.rectangle.angled")
             } description: {
                 Text("Import photos or drop them here to frame them for your post.")
+                if selection == .unsaved {
+                    Text("Nothing here is saved until you use Save as Project.")
+                }
             } actions: {
                 Button("Import Photos…") { present(.photos) }
             }
         } else {
             switch mode {
             case .arrange:
-                PhotoGridView(library: library, settings: settingsStore.settings)
+                PhotoGridView(library: library, settings: settings)
             case .preview:
-                PostPreviewView(photos: library.photos, settings: settingsStore.settings)
+                PostPreviewView(photos: library.photos, settings: settings)
             }
         }
     }
@@ -118,6 +157,12 @@ struct ContentView: View {
         }
 
         ToolbarItemGroup(placement: .primaryAction) {
+            if selection == .unsaved {
+                Button("Save as Project…", systemImage: "square.and.arrow.down") { isSavingProject = true }
+                    .keyboardShortcut("s")
+                    .help("Save These Photos and Settings as a Project")
+                    .disabled(library.photos.isEmpty)
+            }
             if exporter.isExporting {
                 ProgressView()
                     .controlSize(.small)
@@ -148,6 +193,41 @@ struct ContentView: View {
         String(AttributedString(localized: resource).characters)
     }
 
+    /// Each project gets its own library; its callback keeps the project's photo list in sync,
+    /// even when an import finishes after switching to another project.
+    private func openSelectedProject() async {
+        guard let project = store[selection.projectID] else {
+            library = unsaved
+            openProjectID = nil
+            await UITestingSupport.seedIfEnabled(unsaved)
+            return
+        }
+        // `.task(id:)` can rerun for the project already open; replacing its library then would
+        // drop an import in flight from the screen.
+        guard project.id != openProjectID else { return }
+        let id = project.id
+        openProjectID = id
+        library = PhotoLibrary(folder: store.photosFolder(for: id)) { photos in
+            store.setPhotos(photos.map(\.url), of: id)
+        }
+        await library.open(store.photoURLs(of: project))
+
+        if !photosToSave.isEmpty {
+            let urls = photosToSave
+            photosToSave = []
+            await library.importPhotos(from: urls)
+            isShowingImportFailures = !library.failedImports.isEmpty
+        }
+    }
+
+    /// Moves the unsaved post into a new project; its photos are copied once the project opens.
+    private func saveUnsaved(as project: Project) {
+        photosToSave = unsaved.photos.map(\.url)
+        unsaved.removeAll()
+        unsavedSettings = FrameSettings()
+        selection = .project(store.create(project))
+    }
+
     private func present(_ picker: FilePicker) {
         filePicker = picker
         isFilePickerPresented = true
@@ -170,7 +250,7 @@ struct ContentView: View {
 
     private func export(to folder: URL) {
         Task {
-            await exporter.requestExport(of: library.photos, settings: settingsStore.settings, to: folder)
+            await exporter.requestExport(of: library.photos, settings: settings, to: folder)
         }
     }
 

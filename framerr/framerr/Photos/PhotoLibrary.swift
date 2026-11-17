@@ -4,23 +4,30 @@ import Foundation
 /// The photos of the post being prepared, in carousel order.
 @Observable
 final class PhotoLibrary {
-    private(set) var photos: [Photo] = []
+    private(set) var photos: [Photo] = [] {
+        didSet { onChange?(photos) }
+    }
+
     private(set) var isImporting = false
     /// Names of files that couldn't be read during the last import.
     private(set) var failedImports: [String] = []
 
-    func importPhotos(from urls: [URL]) async {
-        isImporting = true
-        failedImports = []
-        defer { isImporting = false }
+    /// Where imported photos are copied; `nil` keeps them at their original location.
+    private let folder: URL?
+    private let onChange: (([Photo]) -> Void)?
 
-        for (url, thumbnail) in await Self.loadThumbnails(urls) {
-            if let thumbnail {
-                photos.append(Photo(url: url, thumbnail: thumbnail))
-            } else {
-                failedImports.append(url.lastPathComponent)
-            }
-        }
+    init(folder: URL? = nil, onChange: (([Photo]) -> Void)? = nil) {
+        self.folder = folder
+        self.onChange = onChange
+    }
+
+    func importPhotos(from urls: [URL]) async {
+        await load(urls, copyingInto: folder)
+    }
+
+    /// Loads photos that are already in place, such as those of a saved project.
+    func open(_ urls: [URL]) async {
+        await load(urls, copyingInto: nil)
     }
 
     func index(of id: Photo.ID) -> Int? {
@@ -43,28 +50,74 @@ final class PhotoLibrary {
     }
 
     func remove(_ id: Photo.ID) {
+        deleteCopies(of: photos.filter { $0.id == id })
         photos.removeAll { $0.id == id }
     }
 
     func removeAll() {
+        deleteCopies(of: photos)
         photos.removeAll()
     }
 
-    /// Decodes thumbnails in parallel off the main actor, returned in the original order.
+    private func load(_ urls: [URL], copyingInto folder: URL?) async {
+        // An empty project has nothing to load; don't flash the progress overlay.
+        guard !urls.isEmpty else { return }
+        isImporting = true
+        failedImports = []
+        defer { isImporting = false }
+
+        var loaded: [Photo] = []
+        for (url, photo) in await Self.loadPhotos(urls, copyingInto: folder) {
+            if let photo {
+                loaded.append(photo)
+            } else {
+                failedImports.append(url.lastPathComponent)
+            }
+        }
+        // One change for the whole import, so observers never see a partial list.
+        photos += loaded
+    }
+
+    /// Only touches files inside `folder`, never the user's originals.
+    private func deleteCopies(of removed: [Photo]) {
+        guard let folder else { return }
+        for photo in removed where photo.url.path.hasPrefix(folder.path) {
+            try? FileManager.default.removeItem(at: photo.url.deletingLastPathComponent())
+        }
+    }
+
+    /// Copies (when `folder` is set) and decodes thumbnails in parallel off the main actor, in the original order.
     @concurrent
-    private static func loadThumbnails(_ urls: [URL]) async -> [(URL, CGImage?)] {
-        await withTaskGroup(of: (Int, CGImage?).self) { group in
+    private static func loadPhotos(_ urls: [URL], copyingInto folder: URL?) async -> [(URL, Photo?)] {
+        await withTaskGroup(of: (Int, Photo?).self) { group in
             for (index, url) in urls.enumerated() {
                 group.addTask {
-                    (index, PhotoLoader.image(at: url, maxPixelSize: Photo.thumbnailPixelSize))
+                    (index, makePhoto(from: url, copyingInto: folder))
                 }
             }
 
-            var thumbnails = [CGImage?](repeating: nil, count: urls.count)
-            for await(index, thumbnail) in group {
-                thumbnails[index] = thumbnail
+            var photos = [Photo?](repeating: nil, count: urls.count)
+            for await(index, photo) in group {
+                photos[index] = photo
             }
-            return Array(zip(urls, thumbnails))
+            return Array(zip(urls, photos))
         }
+    }
+
+    /// Copies go to `folder/<uuid>/<name>`, keeping the original name for export.
+    private nonisolated static func makePhoto(from url: URL, copyingInto folder: URL?) -> Photo? {
+        guard let folder else {
+            return PhotoLoader.image(at: url, maxPixelSize: Photo.thumbnailPixelSize).map { Photo(url: url, thumbnail: $0) }
+        }
+        let copyFolder = folder.appending(path: UUID().uuidString)
+        let copy = copyFolder.appending(path: url.lastPathComponent)
+        guard
+            PhotoLoader.copy(url, to: copy),
+            let thumbnail = PhotoLoader.image(at: copy, maxPixelSize: Photo.thumbnailPixelSize)
+        else {
+            try? FileManager.default.removeItem(at: copyFolder)
+            return nil
+        }
+        return Photo(url: copy, thumbnail: thumbnail)
     }
 }

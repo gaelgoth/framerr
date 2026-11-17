@@ -1,14 +1,14 @@
 import SwiftUI
 
 struct FrameSettingsView: View {
-    @Bindable var store: FrameSettingsStore
+    @Binding var settings: FrameSettings
 
     var body: some View {
-        let canvas = store.settings.ratio.canvasSize
+        let canvas = settings.ratio.canvasSize
 
         Form {
             Section("Format") {
-                Picker("Ratio", selection: $store.settings.ratio) {
+                Picker("Ratio", selection: $settings.ratio) {
                     ForEach(AspectRatio.allCases) { ratio in
                         Text(ratio.title).tag(ratio)
                     }
@@ -19,7 +19,7 @@ struct FrameSettingsView: View {
             }
 
             Section {
-                Picker("Fill the Gap", selection: $store.settings.fillGap) {
+                Picker("Fill the Gap", selection: $settings.fillGap) {
                     ForEach(FillGapMode.allCases) { mode in
                         Text(mode.title).tag(mode)
                     }
@@ -28,16 +28,16 @@ struct FrameSettingsView: View {
 
                 LabeledContent("Width") {
                     HStack {
-                        Slider(value: $store.settings.borderPercent, in: FrameSettings.borderRange, step: 0.5)
+                        Slider(value: $settings.borderPercent, in: FrameSettings.borderRange, step: 0.5)
                             .accessibilityIdentifier("border-slider")
-                        Text(store.settings.borderPercent / 100, format: .percent.precision(.fractionLength(0 ... 1)))
+                        Text(settings.borderPercent / 100, format: .percent.precision(.fractionLength(0 ... 1)))
                             .monospacedDigit()
                             .frame(minWidth: 44, alignment: .trailing)
                     }
                 }
-                .disabled(store.settings.fillGap == .all)
+                .disabled(settings.fillGap == .all)
 
-                ColorPicker("Color", selection: $store.color, supportsOpacity: false)
+                ColorPicker("Color", selection: $settings.pickerColor, supportsOpacity: false)
             } header: {
                 Text("Border")
             } footer: {
@@ -48,7 +48,7 @@ struct FrameSettingsView: View {
     }
 
     private var footer: LocalizedStringResource {
-        switch store.settings.fillGap {
+        switch settings.fillGap {
         case .off: "The border surrounds every photo on every side."
         case .horizontal: "Horizontal photos touch the edges. Other photos get a border on every side."
         case .vertical: "Vertical photos touch the edges. Other photos get a border on every side."
@@ -58,5 +58,5 @@ struct FrameSettingsView: View {
 }
 
 #Preview {
-    FrameSettingsView(store: FrameSettingsStore(defaults: UserDefaults(suiteName: "preview")!))
+    FrameSettingsView(settings: .constant(FrameSettings()))
 }

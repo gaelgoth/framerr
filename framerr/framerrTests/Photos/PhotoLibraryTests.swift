@@ -87,6 +87,39 @@ final class PhotoLibraryTests {
         #expect(library.photos.isEmpty)
     }
 
+    @Test func importIntoFolderKeepsACopy() async throws {
+        let source = try TestImages.writeJPEG("A", width: 10, height: 10, in: folder)
+        let copies = folder.appending(path: "project")
+        var changes: [[String]] = []
+        let library = PhotoLibrary(folder: copies) { changes.append($0.map(\.name)) }
+
+        try await library.importPhotos(from: [source, TestImages.writeJPEG("B", width: 10, height: 10, in: folder)])
+        try FileManager.default.removeItem(at: source)
+
+        let copy = library.photos[0].url
+        #expect(copy.path.hasPrefix(copies.path))
+        #expect(library.photos.map(\.name) == ["A", "B"])
+        #expect(changes == [["A", "B"]], "one change per import")
+
+        let reopened = PhotoLibrary(folder: copies)
+        await reopened.open(library.photos.map(\.url))
+        #expect(reopened.photos.map(\.name) == ["A", "B"], "the copy outlives the original")
+
+        library.remove(library.photos[0].id)
+        #expect(!FileManager.default.fileExists(atPath: copy.path))
+        #expect(changes.last == ["B"])
+    }
+
+    @Test func removeNeverDeletesOriginals() async throws {
+        let original = try TestImages.writeJPEG("A", width: 10, height: 10, in: folder)
+        let library = PhotoLibrary(folder: folder.appending(path: "project"))
+        await library.open([original])
+
+        library.removeAll()
+
+        #expect(FileManager.default.fileExists(atPath: original.path))
+    }
+
     private func makeLibrary(_ names: [String]) async throws -> PhotoLibrary {
         let library = PhotoLibrary()
         try await library.importPhotos(from: names.map { try TestImages.writeJPEG($0, width: 10, height: 10, in: folder) })
