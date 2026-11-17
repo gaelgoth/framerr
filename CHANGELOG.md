@@ -1,12 +1,23 @@
 # Changelog
 
+## [0.0.2](https://github.com/gaelgoth/framerr/compare/v0.0.1...v0.0.2) (2026-11-17)
+
+
+### Features
+
+* save posts as projects ([1d09177](https://github.com/gaelgoth/framerr/commit/1d091771254571de9e21bcd9d0a8a0c72985bff6))
+
+
+### Miscellaneous Chores
+
+* fix release-please version pin ([4d3c045](https://github.com/gaelgoth/framerr/commit/4d3c04598c368228836c1ab20b6ba858ceba86a3))
+
 ## [0.0.1](https://github.com/gaelgoth/framerr/compare/v0.0.1...v0.0.1) (2026-11-17)
 
 
 ### Features
 
 * save posts as projects ([1d09177](https://github.com/gaelgoth/framerr/commit/1d091771254571de9e21bcd9d0a8a0c72985bff6))
-* save posts as projects ([fca700c](https://github.com/gaelgoth/framerr/commit/fca700c154003d638fa63c3ab1fc7a9c574a5c16))
 
 ## 0.0.1 (2026-11-13)
 
