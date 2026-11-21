@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.0](https://github.com/gaelgoth/framerr/compare/v0.0.2...v0.1.0) (2026-11-21)
+
+
+### Features
+
+* added 5:4 aspect ratio ([eaf4283](https://github.com/gaelgoth/framerr/commit/eaf42833ad81518859dda40448fa16965139463c))
+* added 5:4 aspect ratio ([f18faec](https://github.com/gaelgoth/framerr/commit/f18faec64151e805b1f9ed99379c45fdf8c1c0a3))
+
 ## [0.0.2](https://github.com/gaelgoth/framerr/compare/v0.0.1...v0.0.2) (2026-11-17)
 
 
