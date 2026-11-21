@@ -6,6 +6,7 @@ nonisolated enum AspectRatio: String, CaseIterable, Codable, Identifiable, Senda
     case square
     case portrait
     case landscape
+    case landscapeFiveFour
     case story
 
     var id: Self {
@@ -17,6 +18,7 @@ nonisolated enum AspectRatio: String, CaseIterable, Codable, Identifiable, Senda
         case .square: CGSize(width: 1080, height: 1080)
         case .portrait: CGSize(width: 1080, height: 1350)
         case .landscape: CGSize(width: 1080, height: 566)
+        case .landscapeFiveFour: CGSize(width: 1080, height: 864)
         case .story: CGSize(width: 1080, height: 1920)
         }
     }
@@ -26,6 +28,7 @@ nonisolated enum AspectRatio: String, CaseIterable, Codable, Identifiable, Senda
         case .square: "Square 1:1"
         case .portrait: "Portrait 4:5"
         case .landscape: "Landscape 1.91:1"
+        case .landscapeFiveFour: "Landscape 5:4"
         case .story: "Story 9:16"
         }
     }

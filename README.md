@@ -20,7 +20,7 @@
 
 ## Features
 
-- Post ratios 1:1, 4:5, 1.91:1 and 9:16 at their exact pixel sizes
+- Post ratios 1:1, 4:5, 1.91:1, 5:4 and 9:16 at their exact pixel sizes
 - Border width and color
 - Compression-friendly JPEG export
 
